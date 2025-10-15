@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api";
 
-const empty = {
+const EMPTY = {
   name: "",
   type: "cabin",
   description: "",
@@ -13,15 +13,16 @@ const empty = {
   discountPercent: "",
 };
 
-function toNumberOrNull(v) {
+function toNum(v) {
   if (v === "" || v === null || typeof v === "undefined") return null;
   const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  if (!Number.isFinite(n)) return null;
+  return n;
 }
 
-function applyDiscount(value, discountPercent) {
-  const base = toNumberOrNull(value);
-  const d = toNumberOrNull(discountPercent);
+function priceAfterDiscount(value, discountPercent) {
+  const base = toNum(value);
+  const d = toNum(discountPercent);
   if (base === null || d === null || d <= 0) return base;
   const p = Math.min(Math.max(d, 0), 100);
   return Math.round(base * (100 - p)) / 100;
@@ -29,7 +30,7 @@ function applyDiscount(value, discountPercent) {
 
 export default function Admin() {
   const [items, setItems] = useState([]);
-  const [form, setForm] = useState(empty);
+  const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function Admin() {
     setItems(data);
   }
 
-  function handleChange(e) {
+  function onChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
@@ -51,15 +52,15 @@ export default function Admin() {
       name: src.name,
       type: src.type,
       description: src.description,
-      pricePerNight: toNumberOrNull(src.pricePerNight),
-      pricePerSession: toNumberOrNull(src.pricePerSession),
-      capacity: toNumberOrNull(src.capacity),
+      pricePerNight: toNum(src.pricePerNight),
+      pricePerSession: toNum(src.pricePerSession),
+      capacity: toNum(src.capacity),
       amenities: String(src.amenities)
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),
       images: [src.images],
-      discountPercent: toNumberOrNull(src.discountPercent),
+      discountPercent: toNum(src.discountPercent),
     };
   }
 
@@ -72,23 +73,23 @@ export default function Admin() {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-      setItems((prev) =>
-        prev.map((x) =>
-          String(x._id || x.id) === String(editId) ? updated : x
-        )
-      );
-      setEditId(null);
-      setForm(empty);
-      alert("Pakeitimai išsaugoti");
-    } else {
-      const doc = await api("/api/listings", {
-        method: "POST",
-        body: JSON.stringify(payload),
+      setItems((prev) => {
+        const idStr = String(editId);
+        return prev.map((x) => (String(x._id || x.id) === idStr ? updated : x));
       });
-      setItems((prev) => [doc, ...prev]);
-      setForm(empty);
-      alert("Įrašas sukurtas sėkmingai");
+      setEditId(null);
+      setForm(EMPTY);
+      alert("Pakeitimai išsaugoti");
+      return;
     }
+
+    const doc = await api("/api/listings", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    setItems((prev) => [doc, ...prev]);
+    setForm(EMPTY);
+    alert("Įrašas sukurtas");
   }
 
   function startEdit(it) {
@@ -97,13 +98,15 @@ export default function Admin() {
       name: it.name || "",
       type: it.type || "cabin",
       description: it.description || "",
-      pricePerNight:
-        typeof it.pricePerNight === "number" ? String(it.pricePerNight) : "",
-      pricePerSession:
-        typeof it.pricePerSession === "number"
-          ? String(it.pricePerSession)
-          : "",
-      capacity: typeof it.capacity === "number" ? String(it.capacity) : "",
+      pricePerNight: Number.isFinite(Number(it.pricePerNight))
+        ? String(Number(it.pricePerNight))
+        : "",
+      pricePerSession: Number.isFinite(Number(it.pricePerSession))
+        ? String(Number(it.pricePerSession))
+        : "",
+      capacity: Number.isFinite(Number(it.capacity))
+        ? String(Number(it.capacity))
+        : "",
       amenities: Array.isArray(it.amenities)
         ? it.amenities.join(", ")
         : it.amenities || "",
@@ -117,36 +120,196 @@ export default function Admin() {
 
   function cancelEdit() {
     setEditId(null);
-    setForm(empty);
+    setForm(EMPTY);
   }
 
   async function remove(id, name) {
-    if (!confirm(`Ar tikrai šalinti „${name || "įrašą"}“?`)) return;
-    try {
-      await api(`/api/listings/${id}`, { method: "DELETE" });
-      setItems((prev) =>
-        prev.filter((x) => String(x._id || x.id) !== String(id))
-      );
-      if (editId && String(editId) === String(id)) cancelEdit();
-      alert("Įrašas pašalintas");
-    } catch (e) {
-      alert("nepavyko pašalinti: " + e.message);
-    }
+    const ok = confirm(`Ar tikrai šalinti „${name || "įrašą"}“?`);
+    if (!ok) return;
+    await api(`/api/listings/${id}`, { method: "DELETE" });
+    setItems((prev) =>
+      prev.filter((x) => String(x._id || x.id) !== String(id))
+    );
+    if (editId && String(editId) === String(id)) cancelEdit();
+    alert("Įrašas pašalintas");
   }
 
-  const previewNight = applyDiscount(form.pricePerNight, form.discountPercent);
-  const previewSession = applyDiscount(
-    form.pricePerSession,
-    form.discountPercent
-  );
+  function PricePreview({ label, value, discount }) {
+    const v = toNum(value);
+    if (v === null) {
+      return (
+        <div>
+          <div style={{ opacity: 0.8, fontSize: ".9rem" }}>{label}</div>
+          <span style={{ opacity: 0.6 }}>—</span>
+        </div>
+      );
+    }
+    const hasDiscount = toNum(discount) > 0;
+    const pv = priceAfterDiscount(value, discount);
+    const showPv = pv !== null && pv !== Number(value);
+
+    return (
+      <div>
+        <div style={{ opacity: 0.8, fontSize: ".9rem" }}>{label}</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+          <span
+            style={{
+              textDecoration: hasDiscount ? "line-through" : "none",
+              opacity: hasDiscount ? 0.7 : 1,
+            }}
+          >
+            {Number(value)} €
+          </span>
+          {showPv ? (
+            <strong
+              style={{
+                color: "#FFD700",
+                textShadow: "0 0 6px rgba(255,215,0,0.7)",
+              }}
+            >
+              {pv} €
+            </strong>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  function PriceTag({ it }) {
+    const hasNight = Number.isFinite(Number(it.pricePerNight));
+    const hasSess = Number.isFinite(Number(it.pricePerSession));
+    const preferSession = it.type === "sauna" || it.type === "activity";
+    const disc = Number(it.discountPercent) > 0;
+    const nightDisc = priceAfterDiscount(it.pricePerNight, it.discountPercent);
+    const sessDisc = priceAfterDiscount(it.pricePerSession, it.discountPercent);
+
+    if (preferSession && hasSess) {
+      if (disc) {
+        return (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "baseline",
+              justifyContent: "flex-end",
+            }}
+          >
+            <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+              {it.pricePerSession} €
+            </span>
+            <strong
+              style={{
+                color: "#FFD700",
+                textShadow: "0 0 6px rgba(255,215,0,0.7)",
+              }}
+            >
+              {sessDisc} € / sesija
+            </strong>
+          </div>
+        );
+      }
+      return (
+        <div
+          style={{
+            color: "#FFD700",
+            fontWeight: "bold",
+            textShadow: "0 0 6px rgba(255,215,0,0.7)",
+          }}
+        >
+          {Number(it.pricePerSession)} € / sesija
+        </div>
+      );
+    }
+
+    if (hasNight) {
+      if (disc) {
+        return (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "baseline",
+              justifyContent: "flex-end",
+            }}
+          >
+            <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+              {Number(it.pricePerNight)} €
+            </span>
+            <strong
+              style={{
+                color: "#FFD700",
+                textShadow: "0 0 6px rgba(255,215,0,0.7)",
+              }}
+            >
+              {nightDisc} € / naktis
+            </strong>
+          </div>
+        );
+      }
+      return (
+        <div
+          style={{
+            color: "#FFD700",
+            fontWeight: "bold",
+            textShadow: "0 0 6px rgba(255,215,0,0.7)",
+          }}
+        >
+          {Number(it.pricePerNight)} € / naktis
+        </div>
+      );
+    }
+
+    if (hasSess) {
+      if (disc) {
+        return (
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              alignItems: "baseline",
+              justifyContent: "flex-end",
+            }}
+          >
+            <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+              {it.pricePerSession} €
+            </span>
+            <strong
+              style={{
+                color: "#FFD700",
+                textShadow: "0 0 6px rgba(255,215,0,0.7)",
+              }}
+            >
+              {sessDisc} € / sesija
+            </strong>
+          </div>
+        );
+      }
+      return (
+        <div
+          style={{
+            color: "#FFD700",
+            fontWeight: "bold",
+            textShadow: "0 0 6px rgba(255,215,0,0.7)",
+          }}
+        >
+          {Number(it.pricePerSession)} € / sesija
+        </div>
+      );
+    }
+
+    return <div style={{ opacity: 0.7 }}>Kaina nenurodyta</div>;
+  }
+
+  let titleNote = " - Kūrimas";
+  if (editId) titleNote = " - Redagavimas";
+
+  let submitText = "Išsaugoti";
+  if (editId) submitText = "Išsaugoti pakeitimus";
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
-      <h2>
-        Admin — išteklių valdymas {editId ? " - Redagavimas" : " - Kūrimas"}
-      </h2>
+      <h2>Admin — išteklių valdymas{titleNote}</h2>
 
-      {/* Forma */}
       <form
         className="card"
         onSubmit={save}
@@ -157,14 +320,14 @@ export default function Admin() {
           name="name"
           placeholder="Pavadinimas"
           value={form.name}
-          onChange={handleChange}
+          onChange={onChange}
           required
         />
         <select
           className="select"
           name="type"
           value={form.type}
-          onChange={handleChange}
+          onChange={onChange}
         >
           <option value="cabin">Namelis</option>
           <option value="sauna">Pirtis</option>
@@ -177,7 +340,7 @@ export default function Admin() {
           type="number"
           placeholder="Kaina už naktį (nameliams)"
           value={form.pricePerNight}
-          onChange={handleChange}
+          onChange={onChange}
         />
         <input
           className="input"
@@ -185,10 +348,9 @@ export default function Admin() {
           type="number"
           placeholder="Kaina už sesiją (pirtis/veiklos)"
           value={form.pricePerSession}
-          onChange={handleChange}
+          onChange={onChange}
         />
 
-        {/* Nuolaida % */}
         <input
           className="input"
           name="discountPercent"
@@ -198,7 +360,7 @@ export default function Admin() {
           step="1"
           placeholder="Nuolaida (%)"
           value={form.discountPercent}
-          onChange={handleChange}
+          onChange={onChange}
         />
 
         <input
@@ -207,14 +369,14 @@ export default function Admin() {
           type="number"
           placeholder="Talpa"
           value={form.capacity}
-          onChange={handleChange}
+          onChange={onChange}
         />
         <input
           className="input"
           name="images"
           placeholder="Paveikslo URL"
           value={form.images}
-          onChange={handleChange}
+          onChange={onChange}
         />
 
         <textarea
@@ -223,14 +385,14 @@ export default function Admin() {
           placeholder="Aprašymas"
           style={{ gridColumn: "1/-1" }}
           value={form.description}
-          onChange={handleChange}
+          onChange={onChange}
         />
         <input
           className="input"
           name="amenities"
-          placeholder="Patogumai (kableliais)"
+          placeholder="Patogumai ()"
           value={form.amenities}
-          onChange={handleChange}
+          onChange={onChange}
           style={{ gridColumn: "1/-1" }}
         />
 
@@ -242,110 +404,53 @@ export default function Admin() {
             alignItems: "baseline",
           }}
         >
-          {/* Naktis */}
-          <div>
-            <div style={{ opacity: 0.8, fontSize: ".9rem" }}>
-              Kaina už naktį
-            </div>
-            {toNumberOrNull(form.pricePerNight) !== null ? (
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span
-                  style={{
-                    textDecoration: form.discountPercent
-                      ? "line-through"
-                      : "none",
-                    opacity: form.discountPercent ? 0.7 : 1,
-                  }}
-                >
-                  {Number(form.pricePerNight)} €
-                </span>
-                {previewNight !== null &&
-                  previewNight !== Number(form.pricePerNight) && (
-                    <strong
-                      style={{
-                        color: "#FFD700",
-                        textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                      }}
-                    >
-                      {previewNight} €
-                    </strong>
-                  )}
-              </div>
-            ) : (
-              <span style={{ opacity: 0.6 }}>—</span>
-            )}
-          </div>
-
-          {/* Sesija */}
-          <div>
-            <div style={{ opacity: 0.8, fontSize: ".9rem" }}>
-              Kaina už sesiją
-            </div>
-            {toNumberOrNull(form.pricePerSession) !== null ? (
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                <span
-                  style={{
-                    textDecoration: form.discountPercent
-                      ? "line-through"
-                      : "none",
-                    opacity: form.discountPercent ? 0.7 : 1,
-                  }}
-                >
-                  {Number(form.pricePerSession)} €
-                </span>
-                {previewSession !== null &&
-                  previewSession !== Number(form.pricePerSession) && (
-                    <strong
-                      style={{
-                        color: "#FFD700",
-                        textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                      }}
-                    >
-                      {previewSession} €
-                    </strong>
-                  )}
-              </div>
-            ) : (
-              <span style={{ opacity: 0.6 }}>—</span>
-            )}
-          </div>
+          <PricePreview
+            label="Kaina už naktį"
+            value={form.pricePerNight}
+            discount={form.discountPercent}
+          />
+          <PricePreview
+            label="Kaina už sesiją"
+            value={form.pricePerSession}
+            discount={form.discountPercent}
+          />
         </div>
 
         <div style={{ gridColumn: "1/-1", display: "flex", gap: 8 }}>
           <button className="btn" type="submit">
-            {editId ? "Išsaugoti pakeitimus" : "Išsaugoti"}
+            {submitText}
           </button>
-          {editId && (
+          {editId ? (
             <button className="btn ghost" type="button" onClick={cancelEdit}>
               Atšaukti
             </button>
-          )}
+          ) : null}
         </div>
       </form>
 
-      {/* Sąrašas */}
       <div className="grid">
         {items.map((it) => {
-          const amenities = Array.isArray(it.amenities)
-            ? it.amenities
-            : typeof it.amenities === "string" && it.amenities.length
-            ? it.amenities
-                .split(",")
-                .map((s) => s.trim())
-                .filter(Boolean)
-            : [];
-
-          const FALLBACK_IMG = "https://picsum.photos/id/237/1200/600.webp";
-          const cover = Array.isArray(it.images)
-            ? it.images[0] || FALLBACK_IMG
-            : it.images || FALLBACK_IMG;
-
           const id = it._id || it.id;
-          const nightDisc = applyDiscount(it.pricePerNight, it.discountPercent);
-          const sessDisc = applyDiscount(
-            it.pricePerSession,
-            it.discountPercent
-          );
+
+          let amenities = [];
+          if (Array.isArray(it.amenities)) amenities = it.amenities;
+          else if (typeof it.amenities === "string" && it.amenities.length) {
+            amenities = it.amenities
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean);
+          }
+
+          let cover = "https://picsum.photos/id/237/1200/600.webp";
+          if (Array.isArray(it.images)) {
+            if (it.images[0]) cover = it.images[0];
+          } else if (typeof it.images === "string" && it.images) {
+            cover = it.images;
+          }
+
+          let desc = "";
+          if (typeof it.description === "string") desc = it.description;
+          if (desc.length > 140) desc = desc.slice(0, 140) + "…";
 
           return (
             <div className="card" key={id} style={{ display: "grid", gap: 8 }}>
@@ -380,12 +485,9 @@ export default function Admin() {
                 ) : null}
               </div>
 
-              <p style={{ opacity: 0.8, margin: "4px 0 0" }}>
-                {it.description?.slice(0, 140)}
-                {it.description && it.description.length > 140 ? "…" : ""}
-              </p>
+              <p style={{ opacity: 0.8, margin: "4px 0 0" }}>{desc}</p>
 
-              {amenities.length > 0 && (
+              {amenities.length > 0 ? (
                 <div
                   style={{
                     display: "flex",
@@ -400,7 +502,7 @@ export default function Admin() {
                     </span>
                   ))}
                 </div>
-              )}
+              ) : null}
 
               <div
                 style={{
@@ -414,102 +516,15 @@ export default function Admin() {
                   <button className="btn ghost" onClick={() => startEdit(it)}>
                     Redaguoti
                   </button>
-                  <button className="btn ghost" onClick={() => remove(id)}>
+                  <button
+                    className="btn ghost"
+                    onClick={() => remove(id, it.name)}
+                  >
                     Šalinti
                   </button>
                 </div>
-
                 <div style={{ textAlign: "right" }}>
-                  {/* Nakties kaina su nuolaida */}
-                  {typeof it.pricePerNight === "number" && (
-                    <div title="Kaina už naktį">
-                      {it.discountPercent ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            alignItems: "baseline",
-                            justifyContent: "flex-end",
-                          }}
-                        >
-                          <span
-                            style={{
-                              textDecoration: "line-through",
-                              opacity: 0.7,
-                            }}
-                          >
-                            {it.pricePerNight} €
-                          </span>
-                          <strong
-                            style={{
-                              color: "#FFD700",
-                              textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                            }}
-                          >
-                            {nightDisc} € / naktis
-                          </strong>
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            color: "#FFD700",
-                            fontWeight: "bold",
-                            textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                          }}
-                        >
-                          {it.pricePerNight} € / naktis
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Sesijos kaina su nuolaida */}
-                  {typeof it.pricePerSession === "number" && (
-                    <div title="Kaina už sesiją" style={{ marginTop: 4 }}>
-                      {it.discountPercent ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            alignItems: "baseline",
-                            justifyContent: "flex-end",
-                          }}
-                        >
-                          <span
-                            style={{
-                              textDecoration: "line-through",
-                              opacity: 0.7,
-                            }}
-                          >
-                            {it.pricePerSession} €
-                          </span>
-                          <strong
-                            style={{
-                              color: "#FFD700",
-                              textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                            }}
-                          >
-                            {sessDisc} € / sesija
-                          </strong>
-                        </div>
-                      ) : (
-                        <div
-                          style={{
-                            color: "#FFD700",
-                            fontWeight: "bold",
-                            textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                          }}
-                        >
-                          {it.pricePerSession} € / sesija
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {!Number.isFinite(it.pricePerNight) &&
-                    !Number.isFinite(it.pricePerSession) && (
-                      <div style={{ opacity: 0.7 }}>Kaina nenurodyta</div>
-                    )}
+                  <PriceTag it={it} />
                 </div>
               </div>
             </div>

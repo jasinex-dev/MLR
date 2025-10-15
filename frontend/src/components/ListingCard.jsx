@@ -9,22 +9,124 @@ function priceWithDiscount(base, discountPercent) {
   return Math.round(b * (100 - p)) / 100;
 }
 
-export default function ListingCard({ item }) {
+function renderPrice(item) {
   const hasNight = Number.isFinite(Number(item.pricePerNight));
   const hasSess = Number.isFinite(Number(item.pricePerSession));
-
+  const preferSession = item.type === "sauna" || item.type === "activity";
   const nightDisc = priceWithDiscount(item.pricePerNight, item.discountPercent);
   const sessDisc = priceWithDiscount(
     item.pricePerSession,
     item.discountPercent
   );
+  const discount = Number(item.discountPercent) > 0;
 
-  const preferSession = item.type === "sauna" || item.type === "activity";
+  if (preferSession && hasSess) {
+    if (discount) {
+      return (
+        <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+          <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+            {Number(item.pricePerSession)} €
+          </span>
+          <strong
+            style={{
+              color: "#FFD700",
+              textShadow: "0 0 6px rgba(255,215,0,0.7)",
+            }}
+          >
+            {sessDisc} € / sesija
+          </strong>
+        </div>
+      );
+    } else {
+      return (
+        <p
+          style={{
+            color: "#FFD700",
+            fontWeight: "bold",
+            margin: 0,
+            textShadow: "0 0 6px rgba(255,215,0,0.7)",
+          }}
+        >
+          {Number(item.pricePerSession)} € / sesija
+        </p>
+      );
+    }
+  }
 
+  if (hasNight) {
+    if (discount) {
+      return (
+        <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+          <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+            {Number(item.pricePerNight)} €
+          </span>
+          <strong
+            style={{
+              color: "#FFD700",
+              textShadow: "0 0 6px rgba(255,215,0,0.7)",
+            }}
+          >
+            {nightDisc} € / naktis
+          </strong>
+        </div>
+      );
+    } else {
+      return (
+        <p
+          style={{
+            color: "#FFD700",
+            fontWeight: "bold",
+            margin: 0,
+            textShadow: "0 0 6px rgba(255,215,0,0.7)",
+          }}
+        >
+          {Number(item.pricePerNight)} € / naktis
+        </p>
+      );
+    }
+  }
+
+  if (hasSess) {
+    if (discount) {
+      return (
+        <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+          <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+            {Number(item.pricePerSession)} €
+          </span>
+          <strong
+            style={{
+              color: "#FFD700",
+              textShadow: "0 0 6px rgba(255,215,0,0.7)",
+            }}
+          >
+            {sessDisc} € / sesija
+          </strong>
+        </div>
+      );
+    } else {
+      return (
+        <p
+          style={{
+            color: "#FFD700",
+            fontWeight: "bold",
+            margin: 0,
+            textShadow: "0 0 6px rgba(255,215,0,0.7)",
+          }}
+        >
+          {Number(item.pricePerSession)} € / sesija
+        </p>
+      );
+    }
+  }
+
+  return <p style={{ opacity: 0.7, margin: 0 }}>Kaina nenurodyta</p>;
+}
+
+export default function ListingCard({ item }) {
   return (
     <div className="card">
       <img
-        src={item.images?.[0] || "https://picsum.photos/seed/moon/600/400"}
+        src={item.images?.[0] || "https://picsum.photos/id/237/1200/600.webp"}
         alt={item.name}
       />
       <div className="header">
@@ -40,102 +142,19 @@ export default function ListingCard({ item }) {
         </div>
         <p style={{ opacity: 0.8 }}>{item.description?.slice(0, 120)}</p>
       </div>
+
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginTop: "8px",
+          marginTop: 8,
         }}
       >
-        <Link className="btn" to={`/listings/${item._id}`}>
+        <Link className="btn btn-blue" to={`/listings/${item._id}`}>
           Peržiūrėti
         </Link>
-        {preferSession && hasSess ? (
-          Number(item.discountPercent) > 0 ? (
-            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-              <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
-                {Number(item.pricePerNight)} €
-              </span>
-
-              <strong
-                style={{
-                  color: "#FFD700",
-                  textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                }}
-              >
-                {sessDisc} € / sesija
-              </strong>
-            </div>
-          ) : (
-            <p
-              style={{
-                color: "#FFD700",
-                fontWeight: "bold",
-                margin: 0,
-                textShadow: "0 0 6px rgba(255,215,0,0.7)",
-              }}
-            >
-              {Number(item.pricePerSession)} € / sesija
-            </p>
-          )
-        ) : hasNight ? (
-          Number(item.discountPercent) > 0 ? (
-            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-              <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
-                {Number(item.pricePerNight)} €
-              </span>
-              <strong
-                style={{
-                  color: "#FFD700",
-                  textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                }}
-              >
-                {nightDisc} € / naktis
-              </strong>
-            </div>
-          ) : (
-            <p
-              style={{
-                color: "#FFD700",
-                fontWeight: "bold",
-                margin: 0,
-                textShadow: "0 0 6px rgba(255,215,0,0.7)",
-              }}
-            >
-              {Number(item.pricePerNight)} € / naktis
-            </p>
-          )
-        ) : hasSess ? (
-          Number(item.discountPercent) > 0 ? (
-            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
-              <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
-                {Number(item.pricePerSession)} €
-              </span>
-              <strong
-                style={{
-                  color: "#FFD700",
-                  textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                }}
-              >
-                {sessDisc} € / sesija
-              </strong>
-            </div>
-          ) : (
-            <p
-              style={{
-                color: "#FFD700",
-                fontWeight: "bold",
-                margin: 0,
-                textShadow: "0 0 6px rgba(255,215,0,0.7)",
-              }}
-            >
-              {Number(item.pricePerSession)} € / sesija
-            </p>
-          )
-        ) : (
-          <p style={{ opacity: 0.7, margin: 0 }}>Kaina nenurodyta</p>
-        )}
+        {renderPrice(item)}
       </div>
     </div>
   );

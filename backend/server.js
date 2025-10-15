@@ -22,7 +22,7 @@ app.get("/api", (_req, res) => res.json({ status: "Moon Lounge Resort API" }));
 app.use("/api/listings", listingsRouter);
 app.use("/api/reviews", reviewsRouter);
 
-// Boot
+
 connectDB().then(() => {
   app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
 });

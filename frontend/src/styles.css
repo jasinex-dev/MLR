@@ -66,17 +66,76 @@ a {
 }
 
 .btn {
-    background: #415eff;
-    color: white;
-    border: none;
-    padding: 10px 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .5rem;
+    padding: .6rem 1rem;
+    border: 0;
     border-radius: 12px;
+    font-weight: 600;
     cursor: pointer;
+    color: #fff;
+    background: #2563eb;
+    position: relative;
+    overflow: hidden;
+    transition: transform .15s ease, background-color .2s ease, box-shadow .2s ease;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, .25);
+}
+
+.btn::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -120%;
+    width: 120%;
+    height: 100%;
+    background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, .25) 50%, transparent 100%);
+    transform: skewX(-20deg);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    background: #1d4ed8;
+    box-shadow: 0 10px 22px rgba(37, 99, 235, .35);
+}
+
+.btn:hover::after {
+    animation: btn-shine .8s ease forwards;
+}
+
+.btn:active {
+    transform: translateY(0);
+    background: #1e40af;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, .25);
+}
+
+.btn:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .6);
+    outline-offset: 2px;
+}
+
+@keyframes btn-shine {
+    from {
+        left: -120%;
+    }
+
+    to {
+        left: 120%;
+    }
 }
 
 .btn.ghost {
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, .18);
+    color: inherit;
+    border: 1px solid currentColor;
+    box-shadow: none;
+    overflow: visible;
+    transition: none;
+}
+
+.btn.ghost::after {
+    content: none;
 }
 
 .input,

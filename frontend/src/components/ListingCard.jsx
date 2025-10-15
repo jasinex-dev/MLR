@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 
-
 function priceWithDiscount(base, discountPercent) {
   const b = Number(base);
   const d = Number(discountPercent);
@@ -11,8 +10,16 @@ function priceWithDiscount(base, discountPercent) {
 }
 
 export default function ListingCard({ item }) {
-  const hasBase = Number.isFinite(Number(item.pricePerNight));
-  const discounted = priceWithDiscount(item.pricePerNight, item.discountPercent);
+  const hasNight = Number.isFinite(Number(item.pricePerNight));
+  const hasSess = Number.isFinite(Number(item.pricePerSession));
+
+  const nightDisc = priceWithDiscount(item.pricePerNight, item.discountPercent);
+  const sessDisc = priceWithDiscount(
+    item.pricePerSession,
+    item.discountPercent
+  );
+
+  const preferSession = item.type === "sauna" || item.type === "activity";
 
   return (
     <div className="card">
@@ -44,7 +51,35 @@ export default function ListingCard({ item }) {
         <Link className="btn" to={`/listings/${item._id}`}>
           Peržiūrėti
         </Link>
-        {hasBase ? (
+        {preferSession && hasSess ? (
+          Number(item.discountPercent) > 0 ? (
+            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+              <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+                {Number(item.pricePerNight)} €
+              </span>
+
+              <strong
+                style={{
+                  color: "#FFD700",
+                  textShadow: "0 0 6px rgba(255,215,0,0.7)",
+                }}
+              >
+                {sessDisc} € / sesija
+              </strong>
+            </div>
+          ) : (
+            <p
+              style={{
+                color: "#FFD700",
+                fontWeight: "bold",
+                margin: 0,
+                textShadow: "0 0 6px rgba(255,215,0,0.7)",
+              }}
+            >
+              {Number(item.pricePerSession)} € / sesija
+            </p>
+          )
+        ) : hasNight ? (
           Number(item.discountPercent) > 0 ? (
             <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
               <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
@@ -53,14 +88,10 @@ export default function ListingCard({ item }) {
               <strong
                 style={{
                   color: "#FFD700",
-                  fontWeight: "bold",
-                  fontSize: "1.1rem",
                   textShadow: "0 0 6px rgba(255,215,0,0.7)",
-                  margin: 0,
                 }}
-                title={`Nuolaida ${Number(item.discountPercent)}%`}
               >
-                {discounted} € / naktis
+                {nightDisc} € / naktis
               </strong>
             </div>
           ) : (
@@ -68,12 +99,38 @@ export default function ListingCard({ item }) {
               style={{
                 color: "#FFD700",
                 fontWeight: "bold",
-                fontSize: "1.1rem",
                 margin: 0,
                 textShadow: "0 0 6px rgba(255,215,0,0.7)",
               }}
             >
               {Number(item.pricePerNight)} € / naktis
+            </p>
+          )
+        ) : hasSess ? (
+          Number(item.discountPercent) > 0 ? (
+            <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+              <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+                {Number(item.pricePerSession)} €
+              </span>
+              <strong
+                style={{
+                  color: "#FFD700",
+                  textShadow: "0 0 6px rgba(255,215,0,0.7)",
+                }}
+              >
+                {sessDisc} € / sesija
+              </strong>
+            </div>
+          ) : (
+            <p
+              style={{
+                color: "#FFD700",
+                fontWeight: "bold",
+                margin: 0,
+                textShadow: "0 0 6px rgba(255,215,0,0.7)",
+              }}
+            >
+              {Number(item.pricePerSession)} € / sesija
             </p>
           )
         ) : (

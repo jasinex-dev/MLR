@@ -7,6 +7,16 @@ const router = Router();
 router.post("/", async (req, res) => {
   try {
     const doc = await Listing.create(req.body);
+
+    const default_img = "https://picsum.photos/id/237/1200/600.webp";
+    const current = Array.isArray(doc.images) ? doc.images[0] : doc.images;
+
+    if (!current || current === default_img) {
+      doc.images = [`https://picsum.photos/seed/${doc._id}/1200/600.webp`];
+      await doc.save();
+    }
+
+
     res.status(201).json(doc);
   } catch (e) {
     console.error("POST /api/listings error:", e);

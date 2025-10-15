@@ -111,10 +111,9 @@ export default function Admin() {
         ? it.amenities.join(", ")
         : it.amenities || "",
       images: Array.isArray(it.images) ? it.images[0] || "" : it.images || "",
-      discountPercent:
-        typeof it.discountPercent === "number"
-          ? String(it.discountPercent)
-          : "",
+      discountPercent: Number.isFinite(Number(it.discountPercent))
+        ? String(Number(it.discountPercent))
+        : "",
     });
   }
 
@@ -175,129 +174,84 @@ export default function Admin() {
     );
   }
 
-  function PriceTag({ it }) {
-    const hasNight = Number.isFinite(Number(it.pricePerNight));
-    const hasSess = Number.isFinite(Number(it.pricePerSession));
-    const preferSession = it.type === "sauna" || it.type === "activity";
-    const disc = Number(it.discountPercent) > 0;
-    const nightDisc = priceAfterDiscount(it.pricePerNight, it.discountPercent);
-    const sessDisc = priceAfterDiscount(it.pricePerSession, it.discountPercent);
+  function AdminPrices({ item }) {
+    const hasNight = Number.isFinite(Number(item.pricePerNight));
+    const hasSess = Number.isFinite(Number(item.pricePerSession));
+    const hasDisc = Number(item.discountPercent) > 0;
 
-    if (preferSession && hasSess) {
-      if (disc) {
-        return (
+    function afterDisc(v) {
+      const base = Number(v);
+      const d = Number(item.discountPercent);
+      if (!Number.isFinite(base) || !Number.isFinite(d) || d <= 0) return base;
+      const p = Math.min(Math.max(d, 0), 100);
+      return Math.round(base * (100 - p)) / 100;
+    }
+
+    return (
+      <div style={{ textAlign: "right", display: "grid", gap: 4 }}>
+        {hasNight && (
           <div
+            title="Kaina už naktį"
             style={{
               display: "flex",
               gap: 8,
-              alignItems: "baseline",
               justifyContent: "flex-end",
+              alignItems: "baseline",
             }}
           >
-            <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
-              {it.pricePerSession} €
-            </span>
+            {hasDisc ? (
+              <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+                {Number(item.pricePerNight)} €
+              </span>
+            ) : null}
             <strong
               style={{
                 color: "#FFD700",
                 textShadow: "0 0 6px rgba(255,215,0,0.7)",
               }}
             >
-              {sessDisc} € / sesija
+              {hasDisc
+                ? afterDisc(item.pricePerNight)
+                : Number(item.pricePerNight)}{" "}
+              € / naktis
             </strong>
           </div>
-        );
-      }
-      return (
-        <div
-          style={{
-            color: "#FFD700",
-            fontWeight: "bold",
-            textShadow: "0 0 6px rgba(255,215,0,0.7)",
-          }}
-        >
-          {Number(it.pricePerSession)} € / sesija
-        </div>
-      );
-    }
+        )}
 
-    if (hasNight) {
-      if (disc) {
-        return (
+        {hasSess && (
           <div
+            title="Kaina už sesiją"
             style={{
               display: "flex",
               gap: 8,
-              alignItems: "baseline",
               justifyContent: "flex-end",
+              alignItems: "baseline",
             }}
           >
-            <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
-              {Number(it.pricePerNight)} €
-            </span>
+            {hasDisc ? (
+              <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
+                {Number(item.pricePerSession)} €
+              </span>
+            ) : null}
             <strong
               style={{
                 color: "#FFD700",
                 textShadow: "0 0 6px rgba(255,215,0,0.7)",
               }}
             >
-              {nightDisc} € / naktis
+              {hasDisc
+                ? afterDisc(item.pricePerSession)
+                : Number(item.pricePerSession)}{" "}
+              € / sesija
             </strong>
           </div>
-        );
-      }
-      return (
-        <div
-          style={{
-            color: "#FFD700",
-            fontWeight: "bold",
-            textShadow: "0 0 6px rgba(255,215,0,0.7)",
-          }}
-        >
-          {Number(it.pricePerNight)} € / naktis
-        </div>
-      );
-    }
+        )}
 
-    if (hasSess) {
-      if (disc) {
-        return (
-          <div
-            style={{
-              display: "flex",
-              gap: 8,
-              alignItems: "baseline",
-              justifyContent: "flex-end",
-            }}
-          >
-            <span style={{ textDecoration: "line-through", opacity: 0.7 }}>
-              {it.pricePerSession} €
-            </span>
-            <strong
-              style={{
-                color: "#FFD700",
-                textShadow: "0 0 6px rgba(255,215,0,0.7)",
-              }}
-            >
-              {sessDisc} € / sesija
-            </strong>
-          </div>
-        );
-      }
-      return (
-        <div
-          style={{
-            color: "#FFD700",
-            fontWeight: "bold",
-            textShadow: "0 0 6px rgba(255,215,0,0.7)",
-          }}
-        >
-          {Number(it.pricePerSession)} € / sesija
-        </div>
-      );
-    }
-
-    return <div style={{ opacity: 0.7 }}>Kaina nenurodyta</div>;
+        {!hasNight && !hasSess ? (
+          <div style={{ opacity: 0.7 }}>Kaina nenurodyta</div>
+        ) : null}
+      </div>
+    );
   }
 
   let titleNote = " - Kūrimas";
@@ -305,6 +259,15 @@ export default function Admin() {
 
   let submitText = "Išsaugoti";
   if (editId) submitText = "Išsaugoti pakeitimus";
+
+  const previewNight = priceAfterDiscount(
+    form.pricePerNight,
+    form.discountPercent
+  );
+  const previewSession = priceAfterDiscount(
+    form.pricePerSession,
+    form.discountPercent
+  );
 
   return (
     <div style={{ display: "grid", gap: 16 }}>
@@ -390,7 +353,7 @@ export default function Admin() {
         <input
           className="input"
           name="amenities"
-          placeholder="Patogumai ()"
+          placeholder="Patogumai (kableliais)"
           value={form.amenities}
           onChange={onChange}
           style={{ gridColumn: "1/-1" }}
@@ -475,8 +438,8 @@ export default function Admin() {
                 }}
               >
                 {it.type ? <span className="badge">{it.type}</span> : null}
-                {typeof it.capacity === "number" ? (
-                  <span className="badge">Talpa: {it.capacity}</span>
+                {Number.isFinite(Number(it.capacity)) ? (
+                  <span className="badge">Talpa: {Number(it.capacity)}</span>
                 ) : null}
                 {id ? (
                   <span className="badge" title={id}>
@@ -523,9 +486,7 @@ export default function Admin() {
                     Šalinti
                   </button>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <PriceTag it={it} />
-                </div>
+                <AdminPrices item={it} />
               </div>
             </div>
           );

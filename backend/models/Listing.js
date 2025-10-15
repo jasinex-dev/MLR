@@ -11,7 +11,7 @@ const ListingSchema = new mongoose.Schema(
     description: { type: String, default: "" },
     pricePerNight: { type: Number, default: null },
     pricePerSession: { type: Number, default: null },
-    capacity: { type: Number, default: "" },
+    capacity: { type: Number, default: null },
     amenities: { type: [String], default: [] },
     images: { type: [String], default: [] },
     discountPercent: { type: Number, default: 0, min: 0, max: 100 },

@@ -8,7 +8,7 @@ Leave and read guest reviews.
 Admin panel to manage listings and reviews.
 Responsive design for all screen sizes.
 Basic form validation for contact and booking forms.
-Simple and clean code structure for learning purposes.
+
 
 # Technologies Used
 

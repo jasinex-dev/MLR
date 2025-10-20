@@ -42,25 +42,40 @@ export default function ListingDetail() {
     }
   }
 
-  if (loading) return <p>Kraunama...</p>;
-  if (!item) return <p>Nerasta</p>;
+  if (loading) {
+    return <p>Kraunama...</p>;
+  }
 
-  // viršelis
-  const cover = Array.isArray(item.images)
-    ? item.images[0] || "https://picsum.photos/id/237/1200/600.webp"
-    : item.images || "https://picsum.photos/id/237/1200/600.webp";
+  if (!item) {
+    return <p>Nerasta</p>;
+  }
 
-  // kainos (0 arba ne skaičius = nerodom)
+  // Viršelis
+  let cover = "https://picsum.photos/id/237/1200/600.webp";
+  if (Array.isArray(item.images)) {
+    if (item.images.length > 0 && item.images[0]) {
+      cover = item.images[0];
+    }
+  } else if (item.images) {
+    cover = item.images;
+  }
+
+  // Kainos logika
   const night = Number(item.pricePerNight);
   const session = Number(item.pricePerSession);
   const showNight = Number.isFinite(night) && night > 0;
   const showSession = Number.isFinite(session) && session > 0;
 
-  // nuolaida (tik jei > 0)
   const discount = Number(item.discountPercent);
   const hasDiscount = Number.isFinite(discount) && discount > 0;
-  const applyDisc = (x) =>
-    hasDiscount ? Math.round(x * (100 - Math.min(discount, 100))) / 100 : null;
+
+  function applyDisc(x) {
+    if (hasDiscount) {
+      return Math.round(x * (100 - Math.min(discount, 100))) / 100;
+    } else {
+      return null;
+    }
+  }
 
   const nightDisc = showNight ? applyDisc(night) : null;
   const sessDisc = showSession ? applyDisc(session) : null;
@@ -75,8 +90,7 @@ export default function ListingDetail() {
         />
         <h2 style={{ margin: "12px 0" }}>{item.name}</h2>
 
-        {/* Kainas rodome tik jei bent viena > 0 */}
-        {(showNight || showSession) && (
+        {showNight || showSession ? (
           <div
             style={{
               display: "flex",
@@ -87,9 +101,13 @@ export default function ListingDetail() {
           >
             {showNight && (
               <div>
-                {hasDiscount ? (
+                {hasDiscount && nightDisc !== null ? (
                   <div
-                    style={{ display: "flex", gap: 8, alignItems: "baseline" }}
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "baseline",
+                    }}
                   >
                     <span
                       style={{ textDecoration: "line-through", opacity: 0.7 }}
@@ -120,9 +138,13 @@ export default function ListingDetail() {
 
             {showSession && (
               <div>
-                {hasDiscount ? (
+                {hasDiscount && sessDisc !== null ? (
                   <div
-                    style={{ display: "flex", gap: 8, alignItems: "baseline" }}
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      alignItems: "baseline",
+                    }}
                   >
                     <span
                       style={{ textDecoration: "line-through", opacity: 0.7 }}
@@ -151,18 +173,19 @@ export default function ListingDetail() {
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         <p>{item.description}</p>
 
         <div
           style={{ display: "flex", gap: 12, flexWrap: "wrap", opacity: 0.85 }}
         >
-          {item.amenities?.map((a) => (
-            <span key={a} className="badge">
-              {a}
-            </span>
-          ))}
+          {Array.isArray(item.amenities) &&
+            item.amenities.map((a) => (
+              <span key={a} className="badge">
+                {a}
+              </span>
+            ))}
         </div>
       </div>
 

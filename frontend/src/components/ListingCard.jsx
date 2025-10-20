@@ -5,13 +5,11 @@ export default function ListingCard({ item }) {
     ? item.images[0] || "https://picsum.photos/id/237/1200/600.webp"
     : (item && item.images) || "https://picsum.photos/id/237/1200/600.webp";
 
-  
   const night = Number(item && item.pricePerNight);
   const session = Number(item && item.pricePerSession);
   const showNight = Number.isFinite(night) && night > 0;
   const showSession = Number.isFinite(session) && session > 0;
 
- 
   const discount = Number(item && item.discountPercent);
   const hasDiscount = Number.isFinite(discount) && discount > 0;
   function applyDisc(x) {
@@ -20,7 +18,6 @@ export default function ListingCard({ item }) {
     return Math.round(x * (100 - d)) / 100;
   }
 
-  
   let nightEl = null;
   if (showNight) {
     const nightDisc = applyDisc(night);
@@ -101,7 +98,6 @@ export default function ListingCard({ item }) {
     }
   }
 
-  
   const hasAnyPrice = Boolean(nightEl || sessionEl);
 
   return (
@@ -138,7 +134,15 @@ export default function ListingCard({ item }) {
         </Link>
 
         {hasAnyPrice && (
-          <div style={{ textAlign: "right" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "flex-end",
+              gap: 4,
+              textAlign: "right",
+            }}
+          >
             {nightEl}
             {sessionEl}
           </div>

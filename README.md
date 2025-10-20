@@ -21,9 +21,28 @@ Other Tools: CORS, dotenv, morgan.
 
 For security reasons, the .env file is not included in this repository.
 Please create your own .env file following the example below and add your own MongoDB credentials.
+Create a `.env` file **inside `backend/`** with:
 ```
 MONGODB_URI=mongodb+srv://<username>:<password>@cluster0.mongodb.net/mlr
 PORT=5000
 ORIGIN=http://localhost:4000
 
 ```
+
+MLR/
+├─ backend/ # Express API (routes: listings, reviews, etc.)
+│ ├─ src/ # Controllers, models, routes, config
+│ ├─ package.json
+│ └─ .env # API env vars (see below)
+├─ frontend/ # React app (listings UI, reviews, forms)
+│ ├─ src/
+│ ├─ package.json
+│ └─ .env # FE env vars (optional)
+├─ README.md
+└─ .gitignore
+
+## Prerequisites
+
+Node.js ≥ 18
+npm ≥ 9 (or pnpm/yarn)
+MongoDB connection (Atlas or local MongoDB)

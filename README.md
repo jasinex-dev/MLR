@@ -12,7 +12,7 @@ Basic form validation for contact and booking forms.
 
 # Technologies Used
 
-Frontend: React.js, SCSS, JavaScript.
+Frontend: React.js, CSS, JavaScript.
 Backend: Node.js, Express.js.
 Database: MongoDB.
 Other Tools: CORS, dotenv, morgan.
